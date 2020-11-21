@@ -37,7 +37,7 @@ def init(X: np.ndarray, K: int,
     var = np.zeros(K)
     # Compute variance
     for j in range(K):
-        var[j] = ((X - mu[j])**2).mean()
+        var[j] = ((X - mu[j]) ** 2).mean()
 
     mixture = GaussianMixture(mu, var, p)
     post = np.ones((n, K)) / K
@@ -83,7 +83,8 @@ def plot(X: np.ndarray, mixture: GaussianMixture, post: np.ndarray,
 
 
 def rmse(X, Y):
-    return np.sqrt(np.mean((X - Y)**2))
+    return np.sqrt(np.mean((X - Y) ** 2))
+
 
 def bic(X: np.ndarray, mixture: GaussianMixture,
         log_likelihood: float) -> float:
@@ -98,4 +99,71 @@ def bic(X: np.ndarray, mixture: GaussianMixture,
     Returns:
         float: the BIC for this mixture
     """
-    raise NotImplementedError
+    n, _ = X.shape
+    K, d = mixture.mu.shape  # len(mixture.var) and len(mixture.p) = K
+    p = (d * K) + K + (K - 1)
+
+    BIC = log_likelihood - (p * np.log(n)) / 2
+
+    return BIC
+
+
+def multi_plot(X: np.ndarray, mixtureG: GaussianMixture, mixtureK: GaussianMixture,
+               postG: np.ndarray, postK: np.ndarray, titleG: str, titleK: str):
+    """Plots the mixture model comparison for 2D data"""
+    _, K = postG.shape
+    _, K = postK.shape
+
+    percentG = postG / postG.sum(axis=1).reshape(-1, 1)
+    percentK = postK / postK.sum(axis=1).reshape(-1, 1)
+    fig, ax = plt.subplots(2, sharey=True)
+    ax[0].title.set_text(titleG)
+    ax[1].title.set_text(titleK)
+    ax[0].set_xlim((-20, 20))
+    ax[1].set_xlim((-20, 20))
+    ax[0].set_ylim((-20, 20))
+    ax[1].set_ylim((-20, 20))
+    r = 0.25
+    color = ["r", "b", "k", "y", "m", "c"]
+    for i, point in enumerate(X):
+        thetaG = 0
+        thetaK = 0
+        for j in range(K):
+            offsetG = percentG[i, j] * 360
+            offsetK = percentK[i, j] * 360
+            arcG = Arc(point,
+                       r,
+                       r,
+                       0,
+                       thetaG,
+                       thetaG + offsetG,
+                       edgecolor=color[j])
+            arcK = Arc(point,
+                       r,
+                       r,
+                       0,
+                       thetaK,
+                       thetaK + offsetK,
+                       edgecolor=color[j])
+            ax[0].add_patch(arcG)
+            ax[1].add_patch(arcK)
+            thetaG += offsetG
+            thetaK += offsetK
+
+    for j in range(K):
+        muG = mixtureG.mu[j]
+        muK = mixtureK.mu[j]
+        sigmaG = np.sqrt(mixtureG.var[j])
+        sigmaK = np.sqrt(mixtureK.var[j])
+        circleG = Circle(muG, sigmaG, color=color[j], fill=False)
+        circleK = Circle(muK, sigmaK, color=color[j], fill=False)
+        ax[0].add_patch(circleG)
+        ax[1].add_patch(circleK)
+        legendG = "mu = ({:0.2f}, {:0.2f})\n stdv = {:0.2f}".format(
+            muG[0], muG[1], sigmaG)
+        legendK = "mu = ({:0.2f}, {:0.2f})\n stdv = {:0.2f}".format(
+            muK[0], muK[1], sigmaK)
+        ax[0].text(muG[0], muG[1], legendG)
+        ax[1].text(muK[0], muK[1], legendK)
+    plt.axis('equal')
+    plt.show()
