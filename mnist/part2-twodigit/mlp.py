@@ -22,17 +22,19 @@ class MLP(nn.Module):
         self.flatten = Flatten()
         # Fully connected input_dimension image to 64 features
         self.linear1 = nn.Linear(input_dimension, 64)
-        # From 64 to 20 classes
-        self.linear2 = nn.Linear(64, 2 * nb_classes)
+        self.linear2 = nn.Linear(64, 64)
+        # Split the network into two outputs
+        self.linear_first_digit = nn.Linear(64, 10)
+        self.linear_second_digit = nn.Linear(64, 10)
 
     def forward(self, x):
         xf = self.flatten(x)
 
-        h_relu = F.relu(self.linear1(xf))
-        y_pred = self.linear2(h_relu)
+        h_relu1 = F.relu(self.linear1(xf))
+        h_relu2 = F.relu(self.linear2(xf))
 
-        out_first_digit = y_pred[:, :10]
-        out_second_digit = y_pred[:, 10:]
+        out_first_digit = self.linear_first_digit(h_relu1)
+        out_second_digit = self.linear_second_digit(h_relu2)
 
         return out_first_digit, out_second_digit
 
